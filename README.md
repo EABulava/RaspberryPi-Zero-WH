@@ -1,40 +1,40 @@
-# 🕳️ Pi-hole на Raspberry Pi Zero WH (ARMv6)
+# 🕳️ Pi-hole on Raspberry Pi Zero WH (ARMv6)
 
-> Повна інструкція встановлення Pi-hole v6.2.1 на Raspberry Pi Zero WH з ARMv6 та Debian Trixie.  
-> Вирішує проблеми сумісності: несумісний `dialog`, відсутність офіційної підтримки ARMv6, Raspbian-репозиторії.
-
----
-
-## Зміст
-
-1. [Прошивка ОС](#1-прошивка-ос)
-2. [Підключення по SSH](#2-підключення-по-ssh)
-3. [Блокування IPv6 для apt](#3-блокування-ipv6-для-apt)
-4. [Заміна репозиторіїв на Debian](#4-заміна-репозиторіїв-на-debian)
-5. [Встановлення залежностей](#5-встановлення-залежностей)
-6. [Заміна dialog на фейковий (ARMv6)](#6-заміна-dialog-на-фейковий-armv6)
-7. [Завантаження інсталятора та репозиторіїв](#7-завантаження-інсталятора-та-репозиторіїв)
-8. [Патчинг інсталятора](#8-патчинг-інсталятора)
-9. [Запуск інсталятора](#9-запуск-інсталятора)
-10. [Налаштування роутера](#10-налаштування-роутера)
+> Complete installation guide for Pi-hole v6.2.1 on Raspberry Pi Zero WH (ARMv6) with Debian Trixie.  
+> Resolves known compatibility issues: broken `dialog` binary on ARMv6, lack of official ARMv6 support, Raspbian repository conflicts.
 
 ---
 
-## 1. Прошивка ОС
+## Table of Contents
 
-Використовуй **Raspberry Pi Imager**:
+1. [Flash the OS](#1-flash-the-os)
+2. [Connect via SSH](#2-connect-via-ssh)
+3. [Force IPv4 for apt](#3-force-ipv4-for-apt)
+4. [Switch to Debian Repositories](#4-switch-to-debian-repositories)
+5. [Install Dependencies](#5-install-dependencies)
+6. [Replace dialog with a Stub (ARMv6 fix)](#6-replace-dialog-with-a-stub-armv6-fix)
+7. [Download Installer and Repositories](#7-download-installer-and-repositories)
+8. [Patch the Installer](#8-patch-the-installer)
+9. [Run the Installer](#9-run-the-installer)
+10. [Configure the Router](#10-configure-the-router)
 
-- Вибрати образ: `Raspberry Pi OS (32-bit)` — **Trixie**
-- У розширених налаштуваннях вказати:
+---
+
+## 1. Flash the OS
+
+Use **Raspberry Pi Imager**:
+
+- Select image: `Raspberry Pi OS (32-bit)` — **Trixie**
+- In advanced settings, configure:
   - `hostname`
-  - SSH (увімкнути)
-  - Ім'я користувача та пароль
-  - Wi-Fi (SSID + пароль)
-- Записати на картку пам'яті
+  - SSH (enable)
+  - Username and password
+  - Wi-Fi (SSID + password)
+- Write to SD card
 
 ---
 
-## 2. Підключення по SSH
+## 2. Connect via SSH
 
 ```bash
 ssh-keygen -R 192.168.1.88
@@ -43,9 +43,9 @@ ssh eadmin@192.168.1.88
 
 ---
 
-## 3. Блокування IPv6 для apt
+## 3. Force IPv4 for apt
 
-ARMv6 часто має проблеми з IPv6-з'єднаннями. Примусово використовуємо IPv4:
+ARMv6 devices often have issues with IPv6 connectivity. Force IPv4 to avoid `apt` failures:
 
 ```bash
 echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
@@ -53,18 +53,18 @@ echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
 
 ---
 
-## 4. Заміна репозиторіїв на Debian
+## 4. Switch to Debian Repositories
 
-Raspbian-репозиторії не підтримують ARMv6 належним чином — замінюємо на офіційний Debian Trixie.
+Raspbian repositories don't properly support ARMv6 — replace them with official Debian Trixie.
 
-### Вимкнути Raspbian-репозиторії
+### Disable Raspbian repositories
 
 ```bash
 sudo mv /etc/apt/sources.list.d/raspbian.sources /etc/apt/sources.list.d/raspbian.sources.bak
 sudo mv /etc/apt/sources.list.d/raspi.sources /etc/apt/sources.list.d/raspi.sources.bak
 ```
 
-### Додати Debian Trixie
+### Add Debian Trixie
 
 ```bash
 sudo tee /etc/apt/sources.list << 'EOF'
@@ -73,7 +73,7 @@ deb http://deb.debian.org/debian-security trixie-security main contrib non-free 
 EOF
 ```
 
-### Імпортувати GPG-ключі Debian
+### Import Debian GPG keys
 
 ```bash
 sudo gpg --keyserver keyserver.ubuntu.com --recv-keys \
@@ -90,7 +90,7 @@ sudo apt update
 
 ---
 
-## 5. Встановлення залежностей
+## 5. Install Dependencies
 
 ```bash
 sudo dpkg --remove --force-remove-reinstreq pihole-meta 2>/dev/null
@@ -102,9 +102,9 @@ sudo apt install -y \
 
 ---
 
-## 6. Заміна `dialog` на фейковий (ARMv6)
+## 6. Replace `dialog` with a Stub (ARMv6 fix)
 
-Бінарник `dialog` з репозиторіїв несумісний з ARMv6 і крашить інсталятор. Підміняємо його порожнім скриптом:
+The `dialog` binary from the repository is incompatible with ARMv6 and crashes the installer. Replace it with an empty stub script:
 
 ```bash
 sudo mv /usr/bin/dialog /usr/bin/dialog.real
@@ -117,26 +117,26 @@ EOF
 sudo chmod +x /usr/bin/dialog
 ```
 
-> **Примітка:** Оригінальний бінарник збережено у `/usr/bin/dialog.real`.
+> **Note:** The original binary is preserved at `/usr/bin/dialog.real`.
 
 ---
 
-## 7. Завантаження інсталятора та репозиторіїв
+## 7. Download Installer and Repositories
 
-Завантажуємо архіви замість `git clone` (уникаємо проблем з git на ARMv6):
+Download archives instead of using `git clone` to avoid git-related failures on ARMv6:
 
 ```bash
-# Інсталятор Pi-hole
+# Pi-hole installer
 wget -O ~/install.sh \
   https://raw.githubusercontent.com/pi-hole/pi-hole/v6.2.1/automated%20install/basic-install.sh
 
-# Ядро Pi-hole
+# Pi-hole core
 sudo mkdir -p /etc/.pihole
 wget -O /tmp/pihole.tar.gz \
   https://github.com/pi-hole/pi-hole/archive/refs/tags/v6.2.1.tar.gz
 sudo tar -xzf /tmp/pihole.tar.gz -C /etc/.pihole --strip-components=1
 
-# Веб-інтерфейс
+# Web interface
 sudo mkdir -p /var/www/html/admin
 wget -O /tmp/pihole-web.tar.gz \
   https://github.com/pi-hole/web/archive/refs/tags/v6.2.1.tar.gz
@@ -145,9 +145,9 @@ sudo tar -xzf /tmp/pihole-web.tar.gz -C /var/www/html/admin --strip-components=1
 
 ---
 
-## 8. Патчинг інсталятора
+## 8. Patch the Installer
 
-Інсталятор намагається виконувати `git`-команди в директоріях, які ми завантажили як архіви. Замінюємо їх на `true` (no-op):
+The installer tries to run `git` commands inside directories that were extracted from archives. Replace all git calls with `true` (no-op):
 
 ```bash
 sed -i 's/git stash --all --quiet.*$/true # git stash/' ~/install.sh
@@ -161,7 +161,7 @@ sed -i '/git clone -q/c\        true # git clone replaced' ~/install.sh
 
 ---
 
-## 9. Запуск інсталятора
+## 9. Run the Installer
 
 ```bash
 sudo PIHOLE_SKIP_OS_CHECK=true \
@@ -182,41 +182,41 @@ sudo PIHOLE_SKIP_OS_CHECK=true \
   bash ~/install.sh --unattended
 ```
 
-> Після завершення веб-інтерфейс доступний за адресою: **http://192.168.1.88/admin**
+> Once complete, the web interface is available at: **http://192.168.1.88/admin**
 
 ---
 
-## 10. Налаштування роутера
+## 10. Configure the Router
 
-На прикладі **Linksys**:
+Example for **Linksys**:
 
 ```
-Локальна мережа → DHCP → Статичний DNS 1: 192.168.1.88 → Застосувати
+Local Network → DHCP → Static DNS 1: 192.168.1.88 → Apply
 ```
 
-Після цього всі пристрої в мережі автоматично використовуватимуть Pi-hole як DNS-резолвер.
+All devices on the network will now automatically use Pi-hole as their DNS resolver.
 
 ---
 
-## Вирішені проблеми
+## Troubleshooting Summary
 
-| Проблема | Рішення |
+| Problem | Solution |
 |---|---|
-| `dialog` крашить інсталятор на ARMv6 | Заміна на фейковий `#!/bin/sh` скрипт |
-| `git clone` не працює під час інсталяції | Патчинг інсталятора + завантаження архівів вручну |
-| Raspbian-пакети несумісні з ARMv6 | Перехід на офіційний Debian Trixie |
-| IPv6 блокує `apt update` | `Acquire::ForceIPv4 "true"` |
+| `dialog` crashes the installer on ARMv6 | Replace with a stub `#!/bin/sh` script |
+| `git clone` fails during installation | Patch the installer + download archives manually |
+| Raspbian packages incompatible with ARMv6 | Switch to official Debian Trixie |
+| IPv6 blocks `apt update` | Set `Acquire::ForceIPv4 "true"` |
 
 ---
 
-## Версії
+## Versions
 
-| Компонент | Версія |
+| Component | Version |
 |---|---|
 | Pi-hole | v6.2.1 |
 | Raspberry Pi OS | Trixie (32-bit) |
-| Архітектура | ARMv6 |
+| Architecture | ARMv6 |
 
 ---
 
-*Перевірено на Raspberry Pi Zero WH з Pi-hole v6.2.1 та Debian Trixie.*
+*Tested on Raspberry Pi Zero WH with Pi-hole v6.2.1 and Debian Trixie.*
