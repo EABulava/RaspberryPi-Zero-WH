@@ -38,7 +38,7 @@ Use **Raspberry Pi Imager**:
 
 ```bash
 ssh-keygen -R 192.168.1.88
-ssh eadmin@192.168.1.88
+ssh login@192.168.1.88
 ```
 
 ---
